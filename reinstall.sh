@@ -8,7 +8,7 @@
 
 #declare function to run reinstal job
 run_reinstal_job () {
-    if [[ -z ${1+x} || -z ${2+x} || -z ${3+x} || -z ${4+x} || -z ${5+x} ]]; then
+    if [[ -z ${1+x} || -z ${2+x} || -z ${3+x} || -z ${4+x} || -z ${5+x} || -z ${6+x} ]]; then
         echo "Error! Invalid paremeters received. Can't do this job.";
         exit 1;
     fi
@@ -18,10 +18,11 @@ run_reinstal_job () {
 
     #defining required variables
     PATH_TO_BM_MANUAL=$1
-    PATH_TO_DOCROOT=$2
-    REMOTE_USER=$3
-    REMOTE_SERVER=$4
-    REMOTE_PORT=$5
+    PATH_TO_SYNC_FOLDER=$2
+    PATH_TO_DOCROOT=$3
+    REMOTE_USER=$4
+    REMOTE_SERVER=$5
+    REMOTE_PORT=$6
 
     #run sql dumb on remote (via Backup and Migrate module)
     echo "Current job: run 'drush bam-backup' on the server $REMOTE_SERVER in folder $PATH_TO_DOCROOT."
@@ -31,8 +32,8 @@ run_reinstal_job () {
     echo "Current job: sync files folder with remote"
     SSH_OPT="ssh -p $REMOTE_PORT"
     CURRENT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-    mkdir $CURRENT_PATH/public_html/$PATH_TO_BM_MANUAL
-    rsync -avh --delete -e "$SSH_OPT" $REMOTE_USER@$REMOTE_SERVER:$PATH_TO_DOCROOT/$PATH_TO_BM_MANUAL/ $CURRENT_PATH/public_html/$PATH_TO_BM_MANUAL
+    mkdir $CURRENT_PATH/public_html/$PATH_TO_SYNC_FOLDER
+    rsync -avh --delete -e "$SSH_OPT" $REMOTE_USER@$REMOTE_SERVER:$PATH_TO_DOCROOT/$PATH_TO_SYNC_FOLDER/ $CURRENT_PATH/public_html/$PATH_TO_BM_MANUAL
 
     #cd ro site root
     cd "$CURRENT_PATH"/public_html
@@ -48,31 +49,31 @@ run_reinstal_job () {
     gunzip < $BASE_DUMP | drush sql-cli
 
     echo "Done! Servers was synchronized"
-
 }
 
 #Find current path
 CURRENT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 #include file with settings
-. "$CURRENT_PATH"/reinstall.cfg
+. "$CURRENT_PATH"/settings.sh
 
 CURRENT_USER=$(whoami)
 
 if [ "$CURRENT_USER" = "vagrant" ]; then
-    echo "This is DEV!"
+    echo "This is DEV. Run DEV-STAGE sync..."
 
     #create file settings.php from local.settings.php if it doesn't exist
     if [ ! -f $CURRENT_PATH/public_html/sites/default/settings.php ]; then
         if cp $CURRENT_PATH/files/local.settings.php $CURRENT_PATH/public_html/sites/default/settings.php; then
             echo "Settings file created!"
         else
-            echo "Error can't create file settings.php!\n You should set chmod 755 on sites/default folder."
+            echo "Error can't create file settings.php!\n You should set at least chmod 755 on sites/default folder."
             exit 1;
         fi
     fi
 
-    run_reinstal_job $PATH_TO_BM_MANUAL $STAGE_PATH_TO_DOCROOT $STAGE_REMOTE_USER $STAGE_REMOTE_SERVER $STAGE_REMOTE_PORT
+    PATH_TO_SYNC_FOLDER = $PATH_TO_BM_MANUAL
+    run_reinstal_job $PATH_TO_BM_MANUAL $PATH_TO_SYNC_FOLDER $STAGE_PATH_TO_DOCROOT $STAGE_REMOTE_USER $STAGE_REMOTE_SERVER $STAGE_REMOTE_PORT
 
     # we need to ensure that stage_file_proxy module is downloaded and enabled
     # since it always disabled on STAGE-server
@@ -82,8 +83,10 @@ if [ "$CURRENT_USER" = "vagrant" ]; then
     drush variable-set stage_file_proxy_origin "$STAGE_SITE_ADRESS"
 
 elif [ "$CURRENT_USER" = "$STAGE_REMOTE_USER" ]; then
-    echo "This is STAGE!"
-    run_reinstal_job $PATH_TO_BM_MANUAL $PROD_PATH_TO_DOCROOT $PROD_REMOTE_USER $PROD_REMOTE_SERVER $PROD_REMOTE_PORT
+    echo "This is STAGE. Run STAGE-PROD sync..."
+
+    PATH_TO_SYNC_FOLDER = "sites/default/files"
+    run_reinstal_job $PATH_TO_BM_MANUAL $PATH_TO_SYNC_FOLDER $PROD_PATH_TO_DOCROOT $PROD_REMOTE_USER $PROD_REMOTE_SERVER $PROD_REMOTE_PORT
 
 else
     echo "Cant run on this machine. Username doesn't match!"
