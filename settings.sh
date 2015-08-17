@@ -14,7 +14,11 @@ PATH_TO_BM_MANUAL="sites/default/files/private/backup_migrate/manual"
 
 #absolute path to site root on stage-server (without last /)
 #example: /home/stage/public_html
-STAGE_PATH_TO_SITEROOT=""
+STAGE_PATH_TO_DOCROOT=""
+
+#full adress of STAGE site
+#example: http://www.example.com
+STAGE_SITE_ADRESS=""
 
 #other remote host parameters
 #will connect like: ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_SERVER
@@ -28,7 +32,7 @@ STAGE_REMOTE_PORT="22"
 
 #absolute path to site root on prod-server (without last /)
 #example: /home/prod/public_html
-PROD_PATH_TO_SITEROOT=""
+PROD_PATH_TO_DOCROOT=""
 
 #other remote host parameters
 #will connect like: ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_SERVER

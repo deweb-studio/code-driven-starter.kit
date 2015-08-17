@@ -1,8 +1,8 @@
 ---
 # `vagrant_box` can also be set to geerlingguy/centos6, geerlingguy/centos7,
 # geerlingguy/ubuntu1204, parallels/ubuntu-14.04, etc.
-# lets use ubuntu/trusty32 or ubuntu/trusty64 for deWeb.
-vagrant_box: ubuntu/trusty32
+# Or just use standart ubuntu/trusty32 or ubuntu/trusty64.
+vagrant_box: ubuntu/trusty64
 vagrant_user: vagrant
 
 # If you need to run multiple instances of Drupal VM, set a unique hostname,
@@ -19,7 +19,7 @@ vagrant_memory: 512
 
 
 # Settings for building a site
-site_root_path: "/home/vagrant/public_html"
+site_root_path: "/home/vagrant/{{ vagrant_hostname }}/public_html"
 site_domain: "{{ vagrant_hostname }}"
 site_mysql_database: local_db
 site_mysql_user: local_db_user
@@ -50,7 +50,7 @@ mysql_users:
 # to install *any* extras, make set this value to an empty set, e.g. `[]`.
 installed_extras:
   - adminer
-  # - mailhog
+  - mailhog
   # - memcached
   # - pimpmylog
   # - solr
@@ -62,8 +62,6 @@ installed_extras:
 extra_packages:
   - nfs-kernel-server
   - nfs-common
-  - php-mail
-  - sendmail
 
 # You can configure almost anything else on the server in the rest of this file.
 mysql_root_password: root
@@ -91,7 +89,7 @@ php_memory_limit: "192M"
 php_display_errors: "On"
 php_display_startup_errors: "On"
 php_realpath_cache_size: "1024K"
-php_sendmail_path: "/usr/sbin/sendmail -t -i"
+php_sendmail_path: "/usr/sbin/ssmtp -t"
 php_opcache_enabled_in_ini: true
 php_opcache_memory_consumption: "192"
 php_opcache_max_accelerated_files: 4096

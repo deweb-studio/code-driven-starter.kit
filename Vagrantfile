@@ -31,8 +31,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Synced folder configuration
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.vm.synced_folder ".", vconfig['site_root_path'], type: "nfs"
-
+  config.vm.synced_folder ".", "/home/vagrant/#{vconfig['vagrant_hostname']}", type: "nfs"
 
   # Provisioning configuration for Ansible (for Mac/Linux hosts).
   config.vm.provision "ansible" do |ansible|
