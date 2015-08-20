@@ -32,7 +32,7 @@ run_reinstal_job () {
     echo "Current job: sync files folder with remote"
     SSH_OPT="ssh -p $REMOTE_PORT"
     CURRENT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-    mkdir $CURRENT_PATH/public_html/$PATH_TO_SYNC_FOLDER
+    mkdir -p $CURRENT_PATH/public_html/$PATH_TO_SYNC_FOLDER
     rsync -avh --delete -e "$SSH_OPT" $REMOTE_USER@$REMOTE_SERVER:$PATH_TO_DOCROOT/$PATH_TO_SYNC_FOLDER/ $CURRENT_PATH/public_html/$PATH_TO_BM_MANUAL
 
     #cd ro site root
@@ -72,7 +72,7 @@ if [ "$CURRENT_USER" = "vagrant" ]; then
         fi
     fi
 
-    PATH_TO_SYNC_FOLDER = $PATH_TO_BM_MANUAL
+    PATH_TO_SYNC_FOLDER=$PATH_TO_BM_MANUAL
     run_reinstal_job $PATH_TO_BM_MANUAL $PATH_TO_SYNC_FOLDER $STAGE_PATH_TO_DOCROOT $STAGE_REMOTE_USER $STAGE_REMOTE_SERVER $STAGE_REMOTE_PORT
 
     # we need to ensure that stage_file_proxy module is downloaded and enabled
