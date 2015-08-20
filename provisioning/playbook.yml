@@ -10,6 +10,7 @@
 
   roles:
     # Essential roles.
+    - ansible-swapfile
     - geerlingguy.firewall
     - geerlingguy.git
     - geerlingguy.apache
