@@ -18,6 +18,7 @@ STAGE_PATH_TO_DOCROOT=""
 
 #full adress of STAGE site
 #example: http://www.example.com
+#example when using HTTP Basic Authentication: http://myusername:letme%26in@example.com
 STAGE_SITE_ADRESS=""
 
 #other remote host parameters
