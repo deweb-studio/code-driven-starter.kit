@@ -1,7 +1,7 @@
 ---
 # `vagrant_box` can also be set to geerlingguy/centos6, geerlingguy/centos7,
 # geerlingguy/ubuntu1204, parallels/ubuntu-14.04, etc.
-# Or just use standart ubuntu/trusty32 or ubuntu/trusty64.
+# Or just use ubuntu/trusty32 or ubuntu/trusty64.
 vagrant_box: ubuntu/trusty64
 vagrant_user: vagrant
 
@@ -17,9 +17,8 @@ vagrant_memory: 512
 #for now it is disabled
 #vagrant_cpus: 2
 
-
 # Settings for building a site
-site_root_path: "/home/vagrant/{{ vagrant_hostname }}/public_html"
+site_root_path: "/home/vagrant/{{ vagrant_hostname }}/docroot"
 site_domain: "{{ vagrant_hostname }}"
 site_mysql_database: local_db
 site_mysql_user: local_db_user
@@ -55,7 +54,7 @@ installed_extras:
   # - pimpmylog
   # - solr
   # - varnish
-  - xdebug
+  # - xdebug
   # - xhprof
 
 # Add any extra packages you'd like to install.
@@ -155,11 +154,3 @@ solr_xmx: "128M"
 ##########################
 swapfile_location: /swapfile
 swapfile_size: 512M
-
-##############################
-#   Temporary apache setup   #
-##############################
-apache_packages:
-  - apache2
-  # - apache2-mpm-prefork
-  - apache2-utils

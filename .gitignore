@@ -1,3 +1,5 @@
 .vagrant
 .idea
 tmp
+# stage_file_proxy module shouldn't be downloaded to prod site.
+docroot/sites/all/modules/contrib/stage_file_proxy

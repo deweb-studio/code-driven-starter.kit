@@ -1,93 +1,107 @@
 #!/bin/bash
 
-#script for syncing stage server with Prod site.
+# Script for syncing stage server with Prod site.
 
-###################
-#     Actions     #
-###################
+# Environment variables
+CURRENT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+DATE_TIME=`date "+%Y-%m-%d_%H-%M-%S"`
+CURRENT_USER=$(whoami)
 
-#declare function to run reinstal job
-run_reinstal_job () {
-    if [[ -z ${1+x} || -z ${2+x} || -z ${3+x} || -z ${4+x} || -z ${5+x} || -z ${6+x} ]]; then
-        echo "Error! Invalid paremeters received. Can't do this job.";
-        exit 1;
+# include file with settings
+. "$CURRENT_PATH"/settings.sh
+
+
+if [ "$CURRENT_USER" = "vagrant" ]; then
+    echo "#####################################################"
+    echo "#     This is Local DEV. Run DEV-STAGE sync...      #"
+    echo "#####################################################"
+
+    # create file settings.php from local.settings.php if it doesn't exist
+    if [ ! -f $CURRENT_PATH/docroot/sites/default/settings.php ]; then
+        if cp $CURRENT_PATH/docroot/sites/default/default.settings.php $CURRENT_PATH/docroot/sites/default/settings.php; then
+            # Default credentials for database on vagrant machine.
+            LOCAL_BASE_CODNFIG="\$databases = array (\n
+              'default' =>\n
+                array (\n
+                  'default' =>\n
+                    array (\n
+                      'database' => 'local_db',\n
+                      'username' => 'local_db_user',\n
+                      'password' => 'local_db_pass',\n
+                      'host' => 'localhost',\n
+                      'port' => '',\n
+                      'driver' => 'mysql',\n
+                      'prefix' => '',\n
+                    ),\n
+                ),\n
+            );\n"
+
+            echo -e $LOCAL_BASE_CODNFIG >> $CURRENT_PATH/docroot/sites/default/settings.php
+            echo "Settings file created!"
+        else
+            echo "Error can't create file settings.php!\n Check permissions on sites/default folder."
+            exit 1;
+        fi
     fi
 
-    #Find current path
-    CURRENT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+    echo "create base dump on stage site"
+    ssh -p $STAGE_REMOTE_PORT $STAGE_REMOTE_USER@$STAGE_REMOTE_SERVER "cd $STAGE_PATH_TO_DOCROOT; drush sql-dump --gzip --result-file=./${DATE_TIME}_base-dump.sql"
+    echo "copy base dump"
+    scp -P $STAGE_REMOTE_PORT $STAGE_REMOTE_USER@$STAGE_REMOTE_SERVER:$STAGE_PATH_TO_DOCROOT/${DATE_TIME}_base-dump.sql.gz $CURRENT_PATH/docroot/
+    echo "delete dump on remote"
+    ssh -p $STAGE_REMOTE_PORT $STAGE_REMOTE_USER@$STAGE_REMOTE_SERVER "cd $STAGE_PATH_TO_DOCROOT; rm ${DATE_TIME}_base-dump.sql.gz"
 
-    #defining required variables
-    PATH_TO_BM_MANUAL=$1
-    PATH_TO_SYNC_FOLDER=$2
-    PATH_TO_DOCROOT=$3
-    REMOTE_USER=$4
-    REMOTE_SERVER=$5
-    REMOTE_PORT=$6
-
-    #run sql dumb on remote (via Backup and Migrate module)
-    echo "Current job: run 'drush bam-backup' on the server $REMOTE_SERVER in folder $PATH_TO_DOCROOT."
-    ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_SERVER "cd $PATH_TO_DOCROOT; drush bam-backup"
-
-    #run rsync on local machine (sync sites/default/files/ folder)
-    echo "Current job: sync files folder with remote"
-    SSH_OPT="ssh -p $REMOTE_PORT"
-    CURRENT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-    mkdir -p $CURRENT_PATH/public_html/$PATH_TO_SYNC_FOLDER
-    rsync -avh --delete -e "$SSH_OPT" $REMOTE_USER@$REMOTE_SERVER:$PATH_TO_DOCROOT/$PATH_TO_SYNC_FOLDER/ $CURRENT_PATH/public_html/$PATH_TO_BM_MANUAL
-
-    #cd ro site root
-    cd "$CURRENT_PATH"/public_html
+    # cd ro site root
+    cd "$CURRENT_PATH"/docroot
 
     #drop current db
     echo "Current job: drop local DB"
     drush sql-drop -y
 
-    #Restore database from latest dump
+    echo "Current job: restoring local DB from dump $BASE_DUMP"
+    gunzip < ./${DATE_TIME}_base-dump.sql.gz | drush sql-cli
+    rm ${DATE_TIME}_base-dump.sql.gz
+
+    # we need to ensure that stage_file_proxy module is downloaded and enabled
+    # since it always disabled on STAGE-server
+    drush pm-download stage_file_proxy -n
+    drush pm-enable --yes stage_file_proxy
+    drush variable-set stage_file_proxy_origin "$STAGE_SITE_ADRESS"
+
+    echo "Done! Servers was synchronized"
+
+elif [ "$CURRENT_USER" = "$STAGE_REMOTE_USER" ]; then
+    echo "#####################################################"
+    echo "#       This is STAGE. Run STAGE-PROD sync...       #"
+    echo "#####################################################"
+
+    # run sql dumb on remote (via Backup and Migrate module)
+    echo "Current job: run 'drush bam-backup' on the server $PROD_REMOTE_SERVER in folder $PROD_PATH_TO_DOCROOT."
+    ssh -p $PROD_REMOTE_PORT $PROD_REMOTE_USER@$PROD_REMOTE_SERVER "
+        cd $PROD_PATH_TO_DOCROOT
+        drush bam-backup
+        cd $PATH_TO_BM_MANUAL
+        (ls -t|head -n 3;ls)|sort|uniq -u|xargs --no-run-if-empty rm -rf
+        "
+    # Run file synchronisation (sync sites/default/files/ folder)
+    echo "Current job: sync files folder with remote"
+    SSH_OPT="ssh -p $PROD_REMOTE_PORT"
+    rsync -avh --delete -e "$SSH_OPT" $PROD_REMOTE_USER@$PROD_REMOTE_SERVER:$PROD_PATH_TO_DOCROOT/sites/default/files $CURRENT_PATH/docroot/sites/default/
+
+    # cd ro site root
+    cd "$CURRENT_PATH"/docroot
+
+    # drop current db
+    echo "Current job: drop local DB"
+    drush sql-drop -y
+
+    # Restore database from latest dump
     BASE_DUMP=$(ls -t $PATH_TO_BM_MANUAL/*.mysql.gz | head -1)
 
     echo "Current job: restoring local DB from dump $BASE_DUMP"
     gunzip < $BASE_DUMP | drush sql-cli
 
     echo "Done! Servers was synchronized"
-}
-
-#Find current path
-CURRENT_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-
-#include file with settings
-. "$CURRENT_PATH"/settings.sh
-
-CURRENT_USER=$(whoami)
-
-if [ "$CURRENT_USER" = "vagrant" ]; then
-    echo "This is DEV. Run DEV-STAGE sync..."
-
-    #create file settings.php from local.settings.php if it doesn't exist
-    if [ ! -f $CURRENT_PATH/public_html/sites/default/settings.php ]; then
-        if cp $CURRENT_PATH/files/local.settings.php $CURRENT_PATH/public_html/sites/default/settings.php; then
-            echo "Settings file created!"
-        else
-            echo "Error can't create file settings.php!\n You should set at least chmod 755 on sites/default folder."
-            exit 1;
-        fi
-    fi
-
-    PATH_TO_SYNC_FOLDER=$PATH_TO_BM_MANUAL
-    run_reinstal_job $PATH_TO_BM_MANUAL $PATH_TO_SYNC_FOLDER $STAGE_PATH_TO_DOCROOT $STAGE_REMOTE_USER $STAGE_REMOTE_SERVER $STAGE_REMOTE_PORT
-
-    # we need to ensure that stage_file_proxy module is downloaded and enabled
-    # since it always disabled on STAGE-server
-    cd "$CURRENT_PATH"/public_html
-    drush pm-download stage_file_proxy -n
-    drush pm-enable --yes stage_file_proxy
-    drush variable-set stage_file_proxy_origin "$STAGE_SITE_ADRESS"
-
-elif [ "$CURRENT_USER" = "$STAGE_REMOTE_USER" ]; then
-    echo "This is STAGE. Run STAGE-PROD sync..."
-
-    PATH_TO_SYNC_FOLDER = "sites/default/files"
-    run_reinstal_job $PATH_TO_BM_MANUAL $PATH_TO_SYNC_FOLDER $PROD_PATH_TO_DOCROOT $PROD_REMOTE_USER $PROD_REMOTE_SERVER $PROD_REMOTE_PORT
-
 else
     echo "Cant run on this machine. Username doesn't match!"
     exit 1;
