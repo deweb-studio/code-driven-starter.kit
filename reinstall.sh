@@ -20,23 +20,23 @@ if [ "$CURRENT_USER" = "vagrant" ]; then
     if [ ! -f $CURRENT_PATH/docroot/sites/default/settings.php ]; then
         if cp $CURRENT_PATH/docroot/sites/default/default.settings.php $CURRENT_PATH/docroot/sites/default/settings.php; then
             # Default credentials for database on vagrant machine.
-            LOCAL_BASE_CODNFIG="\$databases = array (\n
-              'default' =>\n
-                array (\n
-                  'default' =>\n
-                    array (\n
-                      'database' => 'local_db',\n
-                      'username' => 'local_db_user',\n
-                      'password' => 'local_db_pass',\n
-                      'host' => 'localhost',\n
-                      'port' => '',\n
-                      'driver' => 'mysql',\n
-                      'prefix' => '',\n
-                    ),\n
-                ),\n
-            );\n"
+            LOCAL_BASE_CODNFIG="\$databases = array (
+              'default' =>
+                array (
+                  'default' =>
+                    array (
+                      'database' => 'local_db',
+                      'username' => 'local_db_user',
+                      'password' => 'local_db_pass',
+                      'host' => 'localhost',
+                      'port' => '',
+                      'driver' => 'mysql',
+                      'prefix' => '',
+                    ),
+                ),
+            );"
 
-            echo -e $LOCAL_BASE_CODNFIG >> $CURRENT_PATH/docroot/sites/default/settings.php
+            echo -e "$LOCAL_BASE_CODNFIG" >> $CURRENT_PATH/docroot/sites/default/settings.php
             echo "Settings file created!"
         else
             echo "Error can't create file settings.php!\n Check permissions on sites/default folder."
@@ -64,7 +64,7 @@ if [ "$CURRENT_USER" = "vagrant" ]; then
 
     # we need to ensure that stage_file_proxy module is downloaded and enabled
     # since it always disabled on STAGE-server
-    drush pm-download stage_file_proxy -n
+    drush pm-download stage_file_proxy
     drush pm-enable --yes stage_file_proxy
     drush variable-set stage_file_proxy_origin "$STAGE_SITE_ADRESS"
 
