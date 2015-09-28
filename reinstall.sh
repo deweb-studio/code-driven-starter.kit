@@ -62,11 +62,15 @@ if [ "$CURRENT_USER" = "vagrant" ]; then
     gunzip < ./${DATE_TIME}_base-dump.sql.gz | drush sql-cli
     rm ${DATE_TIME}_base-dump.sql.gz
 
-    # we need to ensure that stage_file_proxy module is downloaded and enabled
-    # since it always disabled on STAGE-server
+    # we need to ensure that stage_file_proxy and devel modules is downloaded and enabled
     drush pm-download stage_file_proxy
     drush pm-enable --yes stage_file_proxy
     drush variable-set stage_file_proxy_origin "$STAGE_SITE_ADRESS"
+    drush pm-download devel
+    drush pm-enable --yes devel
+    # set webmaster and manager passwords to something more simple.
+    drush upwd webmaster --password="$WEBMASTER_PASS"
+    drush upwd manager --password="$WEBMASTER_PASS"
 
     echo "Done! Servers was synchronized"
 
