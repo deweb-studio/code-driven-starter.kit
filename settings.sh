@@ -12,6 +12,10 @@ PATH_TO_BM_MANUAL="sites/default/files/private/backup_migrate/manual"
 #  Settings for DEV-STAGE sync  #
 ##################################
 
+# Password for webmaster on dev environment.
+# lets use project name by default
+WEBMASTER_PASS=""
+
 #absolute path to site root on stage-server (without last /)
 #example: /home/stage/public_html
 STAGE_PATH_TO_DOCROOT=""
